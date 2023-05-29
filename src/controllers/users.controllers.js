@@ -118,3 +118,40 @@ export async function getFollowing (req, res) {
         return res.status(500).send(err.message);
     };
 }
+
+export async function getFollowers (req, res) {
+    const { authorization } = req.headers;
+    if (!authorization) return res.sendStatus(401);
+
+    const token = authorization?.replace("Bearer ", "");
+    try {
+        const userId = await db.query(`SELECT "userId" FROM sessions WHERE token = $1;`, [token]);
+        const id = userId.rows[0].userId;
+        const followers = await db.query(`SELECT following.*, users.* FROM following JOIN users ON following."userId" = users.id WHERE "followingId" = $1;`, [id]);
+        return res.status(200).send(followers.rows);
+    } catch (err) {
+        return res.status(500).send(err.message);
+    };
+};
+
+export async function getProfileById (req, res){
+    const { id } = req.params;
+    try {
+        const profile = await db.query(`SELECT * FROM users WHERE users.id = $1;`, [id]);
+
+        return res.status(200).send(profile.rows[0]);
+    } catch (err) {
+        return res.status(500).send(err.message);
+    }
+};
+
+export async function getPostsById (req, res){
+    const { id } = req.params;
+    try {
+        const profile = await db.query(`SELECT * FROM posts WHERE posts."userId" = $1;`, [id]);
+
+        return res.status(200).send(profile.rows);
+    } catch (err) {
+        return res.status(500).send(err.message);
+    }
+};
