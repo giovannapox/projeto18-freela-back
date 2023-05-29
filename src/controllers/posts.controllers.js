@@ -24,29 +24,6 @@ export async function getPosts(req, res) {
     }
 };
 
-export async function getUser(req, res) {
-    const { authorization } = req.headers;
-    if (!authorization) return res.sendStatus(401);
-
-    const token = authorization?.replace("Bearer ", "");
-    try {
-        const tokenExists = await db.query(`SELECT * FROM sessions WHERE token=$1;`, [token]);
-        if (!tokenExists.rows) return res.sendStatus(401);
-
-        const userExists = await db.query(`
-        SELECT users.*
-        FROM users
-        JOIN sessions ON users.id = sessions."userId"
-        WHERE sessions.token = $1
-        GROUP BY users.id;`, [token]);
-        const user = userExists.rows[0];
-
-        return res.status(200).send(user);
-
-    } catch (err) {
-        return res.status(500).send(err.message);
-    }
-};
 
 export async function newPost(req, res) {
     const { authorization } = req.headers;
@@ -64,3 +41,4 @@ export async function newPost(req, res) {
         return res.status(500).send(err.message);
     };
 };
+

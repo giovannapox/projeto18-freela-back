@@ -43,3 +43,78 @@ export async function signin (req, res){
         return res.status(500).send(err.message);
     };
 };
+
+export async function getUsers (req, res) {
+    const { authorization } = req.headers;
+    if (!authorization) return res.sendStatus(401);
+
+    const token = authorization?.replace("Bearer ", "");
+    try {
+        const userId = await db.query(`SELECT "userId" FROM sessions WHERE token = $1;`, [token]);
+        const id = userId.rows[0].userId
+        console.log(id);
+
+        const users = await db.query(`SELECT * FROM users WHERE id != $1;`, [id]);
+        
+        return res.status(200).send(users.rows);
+    } catch (err) {
+        return res.status(500).send(err.message);
+    };
+};
+
+export async function getUser(req, res) {
+    const { authorization } = req.headers;
+    if (!authorization) return res.sendStatus(401);
+
+    const token = authorization?.replace("Bearer ", "");
+    try {
+        const tokenExists = await db.query(`SELECT * FROM sessions WHERE token=$1;`, [token]);
+        if (!tokenExists.rows) return res.sendStatus(401);
+
+        const userExists = await db.query(`
+        SELECT users.*
+        FROM users
+        JOIN sessions ON users.id = sessions."userId"
+        WHERE sessions.token = $1
+        GROUP BY users.id;`, [token]);
+        const user = userExists.rows[0];
+
+        return res.status(200).send(user);
+
+    } catch (err) {
+        return res.status(500).send(err.message);
+    }
+};
+
+export async function postFollowing (req, res){
+    const { id } = req.params;
+    const { followingId } = req.body;
+    try {
+        const following = await db.query(`SELECT * FROM following WHERE "userId" = $1 AND "followingId" = $2;`, [id, followingId]);
+        if(!following.rows[0]) {
+        await db.query(`INSERT INTO following ("userId", "followingId") VALUES ($1, $2);`, [id, followingId]);
+        return res.sendStatus(201);
+        } else {
+            return res.sendStatus(404);
+        }
+        
+    } catch (err) {
+        return res.status(500).send(err.message);
+    }
+    
+};
+
+export async function getFollowing (req, res) {
+    const { authorization } = req.headers;
+    if (!authorization) return res.sendStatus(401);
+
+    const token = authorization?.replace("Bearer ", "");
+    try {
+        const userId = await db.query(`SELECT "userId" FROM sessions WHERE token = $1;`, [token]);
+        const id = userId.rows[0].userId
+        const following = await db.query(`SELECT following.*, users.* FROM following JOIN users ON following."followingId" = users.id WHERE "userId" = $1;`, [id]);
+        return res.status(200).send(following.rows);
+    } catch (err) {
+        return res.status(500).send(err.message);
+    };
+}
